@@ -1,5 +1,7 @@
 // functions/api/admin/login.ts
-// Relay: Cloudflare Pages Functions -> GAS Api.gs (/admin/login)
+// Relay: Cloudflare Pages Functions -> GAS Api.gs
+// Endpoint: /api/admin/login
+// Env required (Pages project): GAS_API_URL, API_GATE_KEY
 
 type Json = Record<string, unknown>;
 
@@ -15,6 +17,7 @@ function corsHeaders(extra?: HeadersInit): Headers {
 async function readJson(request: Request): Promise<unknown> {
   const ct = request.headers.get("content-type") || "";
   if (ct.includes("application/json")) return await request.json();
+
   const text = await request.text();
   try {
     return JSON.parse(text);
@@ -35,7 +38,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   if (method === "GET") {
     return new Response(
       JSON.stringify({ ok: true, route: "/api/admin/login", via: "cloudflare->gas" }),
-      { status: 200, headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }) }
+      {
+        status: 200,
+        headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }),
+      }
     );
   }
 
@@ -56,7 +62,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
           has_API_GATE_KEY: Boolean(API_GATE_KEY),
         },
       }),
-      { status: 500, headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }) }
+      {
+        status: 500,
+        headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }),
+      }
     );
   }
 
@@ -66,14 +75,20 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   } catch (e) {
     return new Response(
       JSON.stringify({ ok: false, error: "bad_request_body", detail: String(e) }),
-      { status: 400, headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }) }
+      {
+        status: 400,
+        headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }),
+      }
     );
   }
 
-  // GAS 側のエンドポイントに投げる
-  // まずは「/admin/login」をパスとして付与する方式で試す
+  // ----------------------------
+  // GAS relay URL (IMPORTANT)
+  // We do NOT append "/admin/login" to /exec.
+  // We pass path as query: ?path=/admin/login
+  // ----------------------------
   const base = GAS_API_URL.replace(/\/+$/, "");
-  const gasUrl = `${base}/admin/login`;
+  const gasUrl = `${base}?path=/admin/login`;
 
   let gasRes: Response;
   try {
@@ -88,7 +103,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   } catch (e) {
     return new Response(
       JSON.stringify({ ok: false, error: "gas_fetch_failed", detail: String(e), gasUrl }),
-      { status: 502, headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }) }
+      {
+        status: 502,
+        headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }),
+      }
     );
   }
 
