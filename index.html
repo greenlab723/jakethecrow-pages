@@ -1,21 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>Jake the Crow</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テスト九州プロゴルフ研修会</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: -56px;
+            height: calc(100% + 56px);
+            -webkit-overflow-scrolling: touch; 
+        }
+    </style>
 </head>
 <body>
-  <h1>🐦 Jake the Crow</h1>
-  <p>API は生きてます。</p>
+    <iframe id="gasFrame" src=""></iframe>
 
-  <button onclick="test()">管理APIテスト</button>
-  <pre id="out"></pre>
+    <script>
+        (function() {
+            // 基本のGAS URL
+            const baseUrl = "https://script.google.com/macros/s/AKfycbz7ticgo1OjX1zDolghRtfT8TLsOi9fE5odZMQQI5ikBLvTxLiQt0A8PRGwbvez2-vdXA/exec";
+            
+            // 現在のURLパラメータを取得
+            const currentQuery = window.location.search;
+            
+            // 【重要】キャッシュ破りのためのタイムスタンプ作成
+            const cacheBuster = "t=" + new Date().getTime();
+            
+            // パラメータを組み立てる
+            let finalUrl = baseUrl;
+            
+            if (currentQuery) {
+                // すでにパラメータがある場合（?mode=adminなど）
+                finalUrl += currentQuery + "&" + cacheBuster + "&authuser=0";
+            } else {
+                // パラメータがない場合
+                finalUrl += "?" + cacheBuster + "&authuser=0";
+            }
 
-  <script>
-    async function test() {
-      const res = await fetch('/api/admin/view');
-      document.getElementById('out').textContent = await res.text();
-    }
-  </script>
+            // iframeにセット
+            document.getElementById('gasFrame').src = finalUrl;
+        })();
+    </script>
 </body>
 </html>
