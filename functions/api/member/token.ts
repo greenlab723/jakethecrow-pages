@@ -6,7 +6,6 @@
 export async function onRequest(context: any): Promise<Response> {
   const { request, env } = context;
 
-  // GET = health
   if (request.method === "GET") {
     return new Response(
       JSON.stringify({ ok: true, route: "member/token", service: "cf-pages-functions" }),
@@ -14,17 +13,14 @@ export async function onRequest(context: any): Promise<Response> {
     );
   }
 
-  // OPTIONS = CORS preflight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });
   }
 
-  // POST only
   if (request.method !== "POST") {
     return json({ ok: false, error: "Method Not Allowed" }, 405);
   }
 
-  // Required env
   const GAS_API_URL = env.GAS_API_URL as string;
   const API_GATE_KEY = env.API_GATE_KEY as string;
 
@@ -32,7 +28,6 @@ export async function onRequest(context: any): Promise<Response> {
     return json({ ok: false, error: "Server env missing (GAS_API_URL / API_GATE_KEY)" }, 500);
   }
 
-  // Client body (optional)
   let clientBody: any = {};
   try {
     const ct = request.headers.get("content-type") || "";
@@ -43,11 +38,18 @@ export async function onRequest(context: any): Promise<Response> {
     clientBody = {};
   }
 
-  // ✅ GASへ送るpayload（gateKeyはbodyに埋め込み）
+  // ✅ 受け取りを強化：
+  // - { token: "..." } でもOK
+  // - { data: { token: "..." } } でもOK
+  const data =
+    (clientBody && typeof clientBody === "object" && clientBody.data && typeof clientBody.data === "object")
+      ? clientBody.data
+      : (clientBody && typeof clientBody === "object" ? clientBody : {});
+
   const payload = {
     gateKey: API_GATE_KEY,
     route: "member/token",
-    data: clientBody?.data ?? {},
+    data,
     ip: request.headers.get("CF-Connecting-IP") || "",
   };
 
