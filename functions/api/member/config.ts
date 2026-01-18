@@ -1,4 +1,7 @@
 // functions/api/member/config.ts
+// /api/member/config
+// - GET: health
+// - POST: relay to GAS route=member/config (gateKey is injected from env into JSON body)
 
 export async function onRequest(context: any): Promise<Response> {
   const { request, env } = context;
@@ -7,16 +10,13 @@ export async function onRequest(context: any): Promise<Response> {
   if (request.method === "GET") {
     return new Response(
       JSON.stringify({ ok: true, route: "member/config", service: "cf-pages-functions" }),
-      { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" } }
+      { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }
     );
   }
 
   // OPTIONS = CORS preflight
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders(),
-    });
+    return new Response(null, { status: 204, headers: corsHeaders() });
   }
 
   // POST only
@@ -24,15 +24,15 @@ export async function onRequest(context: any): Promise<Response> {
     return json({ ok: false, error: "Method Not Allowed" }, 405);
   }
 
-  // 必須 env
-  const GAS_API_URL = env.GAS_API_URL as string;         // 例: https://script.google.com/macros/s/XXXX/exec
-  const API_GATE_KEY = env.API_GATE_KEY as string;       // gateKey（クライアントからは送らせない）
+  // Required env
+  const GAS_API_URL = env.GAS_API_URL as string;
+  const API_GATE_KEY = env.API_GATE_KEY as string;
 
   if (!GAS_API_URL || !API_GATE_KEY) {
     return json({ ok: false, error: "Server env missing (GAS_API_URL / API_GATE_KEY)" }, 500);
   }
 
-  // クライアントのPOSTボディ（任意）
+  // Client body (optional)
   let clientBody: any = {};
   try {
     const ct = request.headers.get("content-type") || "";
@@ -40,19 +40,16 @@ export async function onRequest(context: any): Promise<Response> {
       clientBody = await request.json();
     }
   } catch {
-    // body無し/壊れてても member/config は動ける想定なので握りつぶし
     clientBody = {};
   }
 
-  // GASへ投げるペイロード（route固定）
+  // ✅ GASへ送るpayload（gateKeyはbodyに埋め込み）
+  // ※ この gateKey のキー名は「GAS側が参照している名前」に必ず合わせること
   const payload = {
+    gateKey: API_GATE_KEY,
     route: "member/config",
-    data: clientBody?.data ?? {},  // 将来拡張用（例: localeなど）
-    meta: {
-      ip: request.headers.get("CF-Connecting-IP") || "",
-      ua: request.headers.get("User-Agent") || "",
-      // 必要なら cfRay なども
-    },
+    data: clientBody?.data ?? {},
+    ip: request.headers.get("CF-Connecting-IP") || "",
   };
 
   try {
@@ -60,21 +57,21 @@ export async function onRequest(context: any): Promise<Response> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Api-Gate-Key": API_GATE_KEY,
+        // ✅ ここでは X-Api-Gate-Key を使わない（GASが拾えない/拾ってない前提）
       },
       body: JSON.stringify(payload),
     });
 
     const text = await res.text();
 
-    // GASがJSONを返す前提。万一JSONでなければ、そのまま返す（デバッグしやすく）
-    const headers = {
-      ...corsHeaders(),
-      "Content-Type": res.headers.get("Content-Type") || "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-    };
-
-    return new Response(text, { status: res.status, headers });
+    return new Response(text, {
+      status: res.status,
+      headers: {
+        ...corsHeaders(),
+        "Content-Type": res.headers.get("Content-Type") || "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (e: any) {
     return json({ ok: false, error: "Upstream fetch failed", detail: String(e?.message || e) }, 502);
   }
@@ -83,7 +80,11 @@ export async function onRequest(context: any): Promise<Response> {
 function json(obj: any, status = 200): Response {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { ...corsHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
