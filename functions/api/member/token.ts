@@ -37,6 +37,11 @@ export async function onRequest(context: any): Promise<Response> {
   } catch {
     clientBody = {};
   }
+  
+  // --- DEBUG: 受信ボディの route が debug/cf-echo なら最優先で返す ---
+  if (clientBody && typeof clientBody === "object" && clientBody.route === "debug/cf-echo") {
+    return json({ ok: true, debug: "cf-echo", receivedBody: clientBody }, 200);
+  }
 
   // ✅ 受け取りを強化：
   // - { token: "..." } でもOK
