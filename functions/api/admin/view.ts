@@ -1,6 +1,6 @@
-// functions/api/admin/login.ts
+// functions/api/admin/view.ts
 // Relay: Cloudflare Pages Functions -> GAS Api.gs
-// Endpoint: /api/admin/login
+// Endpoint: /api/admin/view
 // Env required (Pages project): GAS_API_URL, API_GATE_KEY
 
 type Json = Record<string, unknown>;
@@ -45,7 +45,7 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   // GET = health for this endpoint
   if (method === "GET") {
     return new Response(
-      JSON.stringify({ ok: true, route: "/api/admin/login", via: "cloudflare->gas" }),
+      JSON.stringify({ ok: true, route: "/api/admin/view", via: "cloudflare->gas" }),
       {
         status: 200,
         headers: corsHeaders({ "Content-Type": "application/json; charset=utf-8" }),
@@ -93,7 +93,7 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   // ----------------------------
   // IMPORTANT: gateKey は「必ず Cloudflare 側で注入」する
   // - クライアントが gateKey を送ってきても無視して上書き（漏洩対策）
-  // - このエンドポイントは /api/admin/login なので route も強制
+  // - このエンドポイントは /api/admin/view なので route も強制
   // ----------------------------
   const payload = ensureObjectBody(body);
   payload.route = "admin/view";
