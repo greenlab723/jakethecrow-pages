@@ -55,6 +55,23 @@ export async function onRequest(context: any): Promise<Response> {
   ip: request.headers.get("CF-Connecting-IP") || "",
 };
 
+  // --- DEBUG: Cloudflareが組み立てた内容をそのまま返す（GASへは送らない） ---
+  if (payload.route === "debug/cf-echo") {
+    return json({
+      ok: true,
+      debug: "cf-echo",
+      gasApiUrl: GAS_API_URL,
+      receivedBody: clientBody,
+      computedData: data,
+      payloadPreview: {
+        route: payload.route,
+        data: payload.data,
+        ip: payload.ip
+        // gateKey は秘匿のため返さない
+      }
+    }, 200);
+  }
+  
   try {
     const res = await fetch(GAS_API_URL, {
       method: "POST",
