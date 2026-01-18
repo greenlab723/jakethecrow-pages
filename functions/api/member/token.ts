@@ -8,7 +8,7 @@ export async function onRequest(context: any): Promise<Response> {
 
   if (request.method === "GET") {
     return new Response(
-      JSON.stringify({ ok: true, route: "member/token", service: "cf-pages-functions" }),
+      JSON.stringify({ ok: true, route: "member/token", service: "cf-pages-functions__debug_route_v1" }),
       { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }
     );
   }
