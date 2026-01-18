@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Turnstile request-edit test</title>
+
+  <!-- Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+  <h1>Turnstile request-edit test</h1>
+
+  <p>
+    Email:
+    <input id="email" value="info@greenlab723.com" />
+  </p>
+
+  <p>
+    生年: <input id="y" type="number" value="1976" />
+    月: <input id="m" type="number" value="1" />
+    日: <input id="d" type="number" value="8" />
+  </p>
+
+  <!-- Turnstile widget -->
+  <div class="cf-turnstile"
+       data-sitekey="0x4AAAAAACNLNKJRJjNYuOWb"
+       data-callback="onTurnstileOK"></div>
+
+  <p>
+    <button id="btn" disabled onclick="sendReq()">request-edit を送信</button>
+  </p>
+
+  <pre id="out"></pre>
+
+  <script>
+    let turnstileToken = "";
+
+    function onTurnstileOK(token) {
+      turnstileToken = token;
+      document.getElementById("btn").disabled = false;
+      document.getElementById("out").textContent =
+        "Turnstile OK（token取得済み）\n" + token;
+    }
+
+    async function sendReq() {
+      document.getElementById("btn").disabled = true;
+      document.getElementById("out").textContent = "送信中...";
+
+      const body = {
+        data: {
+          email: document.getElementById("email").value.trim(),
+          y: Number(document.getElementById("y").value),
+          m: Number(document.getElementById("m").value),
+          d: Number(document.getElementById("d").value),
+          cfTurnstileToken: turnstileToken
+        }
+      };
+
+      try {
+        const res = await fetch("/api/member/request-edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        const text = await res.text();
+        document.getElementById("out").textContent =
+          `HTTP ${res.status}\n` + text;
+      } catch (e) {
+        document.getElementById("out").textContent = String(e);
+      }
+    }
+  </script>
+</body>
+</html>
