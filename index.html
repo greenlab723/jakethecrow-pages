@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>Jake the Crow</title>
+</head>
+<body>
+  <h1>🐦 Jake the Crow</h1>
+  <p>API は生きてます。</p>
+
+  <button onclick="test()">管理APIテスト</button>
+  <pre id="out"></pre>
+
+  <script>
+    async function test() {
+      const res = await fetch('/api/admin/view');
+      document.getElementById('out').textContent = await res.text();
+    }
+  </script>
+</body>
+</html>
