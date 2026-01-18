@@ -26,6 +26,14 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/**
+ * body を「必ず object」に正規化する（GASへ投げるJSON用）
+ */
+function ensureObjectBody(body: unknown): Json {
+  if (body && typeof body === "object" && !Array.isArray(body)) return body as Json;
+  return { body };
+}
+
 export const onRequest: PagesFunction = async ({ request, env }) => {
   const method = request.method.toUpperCase();
 
@@ -83,12 +91,17 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   }
 
   // ----------------------------
-  // GAS relay URL (IMPORTANT)
-  // We do NOT append "/admin/login" to /exec.
-  // We pass path as query: ?path=/admin/login
+  // IMPORTANT: gateKey は「必ず Cloudflare 側で注入」する
+  // - クライアントが gateKey を送ってきても無視して上書き（漏洩対策）
+  // - このエンドポイントは /api/admin/login なので route も強制
   // ----------------------------
+  const payload = ensureObjectBody(body);
+  payload.route = "admin/login";
+  payload.gateKey = API_GATE_KEY;
+
+  // GAS relay URL
   const base = GAS_API_URL.replace(/\/+$/, "");
-  const gasUrl = `${base}?path=/admin/login`;
+  const gasUrl = base; // GAS側は body.route を見て分岐するので、クエリ path は不要
 
   let gasRes: Response;
   try {
@@ -96,9 +109,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // 互換のため残してOK（GAS側は基本読めない想定）
         "X-API-GATE-KEY": API_GATE_KEY,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
   } catch (e) {
     return new Response(
