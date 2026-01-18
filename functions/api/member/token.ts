@@ -47,11 +47,13 @@ export async function onRequest(context: any): Promise<Response> {
       : (clientBody && typeof clientBody === "object" ? clientBody : {});
 
   const payload = {
-    gateKey: API_GATE_KEY,
-    route: "member/token",
-    data,
-    ip: request.headers.get("CF-Connecting-IP") || "",
-  };
+  gateKey: API_GATE_KEY,
+  route: (clientBody && typeof clientBody === "object" && typeof clientBody.route === "string" && clientBody.route)
+    ? clientBody.route
+    : "member/token",
+  data,
+  ip: request.headers.get("CF-Connecting-IP") || "",
+};
 
   try {
     const res = await fetch(GAS_API_URL, {
