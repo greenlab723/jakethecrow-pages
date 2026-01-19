@@ -101,3 +101,4 @@ function corsHeaders(): Record<string, string> {
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-GATE-KEY",
   };
 }
+
