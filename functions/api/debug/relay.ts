@@ -35,6 +35,7 @@ export async function onRequest(context: any): Promise<Response> {
     ok: true,
     where: "/api/debug/relay",
     method: request.method,
+    buildId: "debug-relay__2026-01-19__v2__TEXT_JSON",
     gasApiUrl: env.GAS_API_URL || "",
     clientBody,
     relayPayloadPreview: {
@@ -45,6 +46,7 @@ export async function onRequest(context: any): Promise<Response> {
     },
     notes: ["This endpoint DOES NOT call GAS.", "It only shows what would be relayed."],
   }, 200);
+
 }
 
 function json(obj: any, status = 200): Response {
