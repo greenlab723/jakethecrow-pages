@@ -53,9 +53,7 @@ export async function onRequest(context: any): Promise<Response> {
 
   const payload = {
   gateKey: API_GATE_KEY,
-  route: (clientBody && typeof clientBody === "object" && typeof clientBody.route === "string" && clientBody.route)
-    ? clientBody.route
-    : "member/token",
+  route: "member/token",
   data,
   ip: request.headers.get("CF-Connecting-IP") || "",
 };
