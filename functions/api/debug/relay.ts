@@ -43,3 +43,33 @@ export async function onRequest(context: any): Promise<Response> {
       rawTextLength: rawText.length,
       rawTextPreview: rawText.slice(0, 200),
       clientBody,
+      relayPayloadPreview: {
+        route: relayPayload.route,
+        data: relayPayload.data,
+        ip: relayPayload.ip,
+        hasGateKey: !!relayPayload.gateKey, // gateKey自体は秘匿
+      },
+      notes: ["This endpoint DOES NOT call GAS.", "It only shows what would be relayed."],
+    },
+    200
+  );
+}
+
+function json(obj: any, status = 200): Response {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+function corsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-GATE-KEY",
+  };
+}
