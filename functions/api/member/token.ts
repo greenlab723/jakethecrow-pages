@@ -30,10 +30,8 @@ export async function onRequest(context: any): Promise<Response> {
 
   let clientBody: any = {};
   try {
-    const ct = request.headers.get("content-type") || "";
-    if (ct.includes("application/json")) {
-      clientBody = await request.json();
-    }
+    const text = await request.text();
+    clientBody = text ? JSON.parse(text) : {};
   } catch {
     clientBody = {};
   }
