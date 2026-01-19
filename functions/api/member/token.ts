@@ -1,15 +1,21 @@
 // functions/api/member/token.ts
 // /api/member/token
-// - GET: health
-// - POST: relay to GAS route=member/token (gateKey injected from env into JSON body)
+// - GET: minimal health
+// - POST: relay to GAS route="member/token" (gateKey injected from env into JSON body)
 
 export async function onRequest(context: any): Promise<Response> {
   const { request, env } = context;
 
+  // Minimal health check (do not leak env values)
   if (request.method === "GET") {
-    return new Response(
-      JSON.stringify({ ok: true, route: "member/token", service: "cf-pages-functions__debug_route_v1", gasApiUrl: env.GAS_API_URL || "", cfEchoEnabled: true }),
-      { status: 200, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }
+    return json(
+      {
+        ok: true,
+        route: "member/token",
+        service: "cf-pages-functions",
+      },
+      200,
+      { cors: false } // GET health doesn't need permissive CORS
     );
   }
 
@@ -28,6 +34,7 @@ export async function onRequest(context: any): Promise<Response> {
     return json({ ok: false, error: "Server env missing (GAS_API_URL / API_GATE_KEY)" }, 500);
   }
 
+  // Parse JSON safely
   let clientBody: any = {};
   try {
     const text = await request.text();
@@ -35,44 +42,24 @@ export async function onRequest(context: any): Promise<Response> {
   } catch {
     clientBody = {};
   }
-  
-  // --- DEBUG: 受信ボディの route が debug/cf-echo なら最優先で返す ---
-  if (clientBody && typeof clientBody === "object" && clientBody.route === "debug/cf-echo") {
-    return json({ ok: true, debug: "cf-echo", receivedBody: clientBody }, 200);
-  }
 
-  // ✅ 受け取りを強化：
-  // - { token: "..." } でもOK
-  // - { data: { token: "..." } } でもOK
+  // Accept either:
+  // - { token: "..." }
+  // - { data: { token: "..." } }
   const data =
-    (clientBody && typeof clientBody === "object" && clientBody.data && typeof clientBody.data === "object")
+    clientBody && typeof clientBody === "object" && clientBody.data && typeof clientBody.data === "object"
       ? clientBody.data
-      : (clientBody && typeof clientBody === "object" ? clientBody : {});
+      : clientBody && typeof clientBody === "object"
+        ? clientBody
+        : {};
 
   const payload = {
-  gateKey: API_GATE_KEY,
-  route: "member/token",
-  data,
-  ip: request.headers.get("CF-Connecting-IP") || "",
-};
+    gateKey: API_GATE_KEY,
+    route: "member/token",
+    data,
+    ip: request.headers.get("CF-Connecting-IP") || "",
+  };
 
-  // --- DEBUG: Cloudflareが組み立てた内容をそのまま返す（GASへは送らない） ---
-  if (payload.route === "debug/cf-echo") {
-    return json({
-      ok: true,
-      debug: "cf-echo",
-      gasApiUrl: GAS_API_URL,
-      receivedBody: clientBody,
-      computedData: data,
-      payloadPreview: {
-        route: payload.route,
-        data: payload.data,
-        ip: payload.ip
-        // gateKey は秘匿のため返さない
-      }
-    }, 200);
-  }
-  
   try {
     const res = await fetch(GAS_API_URL, {
       method: "POST",
@@ -95,11 +82,12 @@ export async function onRequest(context: any): Promise<Response> {
   }
 }
 
-function json(obj: any, status = 200): Response {
+function json(obj: any, status = 200, opt?: { cors?: boolean }): Response {
+  const useCors = opt?.cors !== false;
   return new Response(JSON.stringify(obj), {
     status,
     headers: {
-      ...corsHeaders(),
+      ...(useCors ? corsHeaders() : {}),
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
     },
